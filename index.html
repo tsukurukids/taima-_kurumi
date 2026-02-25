@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>集中タイマー</title>
     <link rel="manifest" href="./manifest.json">
+    <meta name="theme-color" content="#6366f1">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="icon" type="image/png" href="./icon.png">
 
     <!-- Fonts -->
@@ -45,6 +49,16 @@
             font-variant-numeric: tabular-nums;
         }
 
+        .safe-area-bottom {
+            padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px));
+        }
+
+        @media (max-width: 640px) {
+            .timer-digits {
+                font-size: 5rem;
+            }
+        }
+
         .btn-hover {
             transition: all 0.2s ease;
         }
@@ -76,119 +90,167 @@
     </style>
 </head>
 
-<body class="flex flex-col items-center justify-center min-h-screen p-4 bg-gray-50">
+<body class="flex flex-col items-center bg-gray-50 h-[100dvh] w-full overflow-hidden p-0 md:p-4">
 
     <div id="main-card"
-        class="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-gray-100 min-h-[500px] transition-colors duration-500">
+        class="w-full flex-1 md:h-auto md:max-w-md bg-white p-4 md:p-8 md:rounded-2xl shadow-xl border-gray-100 flex flex-col transition-colors duration-500 overflow-hidden relative">
 
         <!-- View: Timer -->
-        <div id="view-timer"
-            class="space-y-8 animate-fade-in flex flex-col items-center justify-center h-full min-h-[400px]">
+        <div id="view-timer" class="hidden space-y-4 animate-fade-in flex flex-col items-center justify-center flex-1">
+
+            <div class="text-center space-y-1">
+                <h1 id="timer-label-mode" class="text-xl font-bold text-gray-900">モードを選択</h1>
+                <p id="timer-label-duration" class="text-indigo-600 font-bold text-base">- 分</p>
+                <div id="timer-status" class="text-xs font-medium"></div>
+            </div>
 
             <!-- Timer Display -->
-            <div class="text-center py-8">
-                <div class="timer-digits font-mono text-8xl font-bold text-gray-900 tracking-tight" id="timer-display">
+            <div class="text-center py-2 md:py-8">
+                <div class="timer-digits font-mono text-7xl md:text-8xl font-bold text-gray-900 tracking-tight"
+                    id="timer-display">
                     00:00
                 </div>
             </div>
 
             <!-- Controls -->
-            <div class="flex justify-center items-center space-x-8">
-                <!-- Start Button -->
+            <!-- スタート前: スタートボタン -->
+            <div id="controls-idle" class="flex justify-center items-center">
                 <button onclick="startTimer()" id="btn-start"
-                    class="p-6 rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-600/20 hover:bg-indigo-700 hover:scale-110 transition-all duration-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"
+                    class="flex items-center space-x-3 px-10 py-5 rounded-full bg-indigo-600 text-white text-lg font-bold shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 hover:scale-105 active:scale-95 transition-all duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
                         fill="currentColor">
                         <path d="M8 5v14l11-7z" />
                     </svg>
-                </button>
-
-                <!-- Stop/Pause Button -->
-                <button onclick="pauseTimer()" id="btn-stop"
-                    class="p-6 rounded-full bg-gray-200 text-gray-600 shadow-lg hover:bg-gray-300 hover:scale-110 transition-all duration-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24"
-                        fill="currentColor">
-                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
-                    </svg>
+                    <span>スタート</span>
                 </button>
             </div>
 
-            <!-- Reset Button (Small, optional if user wants only start/stop, but usually needed) -->
-            <button onclick="resetTimer()" class="text-gray-300 hover:text-gray-500 transition-colors p-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74-2.74L3 12" />
-                </svg>
-            </button>
+            <!-- タイマー実行中: 一時停止 + 終了 ボタン -->
+            <div id="controls-running" class="hidden flex justify-center items-center space-x-4">
+                <!-- 一時停止ボタン -->
+                <button onclick="pauseTimer()" id="btn-pause"
+                    class="flex items-center space-x-2 px-7 py-4 rounded-full bg-amber-400 text-white text-base font-bold shadow-lg shadow-amber-400/30 hover:bg-amber-500 hover:scale-105 active:scale-95 transition-all duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                        fill="currentColor">
+                        <path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z" />
+                    </svg>
+                    <span>一時停止</span>
+                </button>
+
+                <!-- 終了ボタン -->
+                <button onclick="stopTimer()" id="btn-stop"
+                    class="flex items-center space-x-2 px-7 py-4 rounded-full bg-red-500 text-white text-base font-bold shadow-lg shadow-red-500/30 hover:bg-red-600 hover:scale-105 active:scale-95 transition-all duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                        fill="currentColor">
+                        <rect x="6" y="6" width="12" height="12" rx="1" />
+                    </svg>
+                    <span>終了</span>
+                </button>
+            </div>
+
+            <!-- 一時停止中: 再開 + 終了 ボタン -->
+            <div id="controls-paused" class="hidden flex justify-center items-center space-x-4">
+                <!-- 再開ボタン -->
+                <button onclick="resumeTimer()"
+                    class="flex items-center space-x-2 px-7 py-4 rounded-full bg-indigo-600 text-white text-base font-bold shadow-lg shadow-indigo-600/30 hover:bg-indigo-700 hover:scale-105 active:scale-95 transition-all duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                        fill="currentColor">
+                        <path d="M8 5v14l11-7z" />
+                    </svg>
+                    <span>再開</span>
+                </button>
+
+                <!-- 終了ボタン -->
+                <button onclick="stopTimer()"
+                    class="flex items-center space-x-2 px-7 py-4 rounded-full bg-red-500 text-white text-base font-bold shadow-lg shadow-red-500/30 hover:bg-red-600 hover:scale-105 active:scale-95 transition-all duration-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24"
+                        fill="currentColor">
+                        <rect x="6" y="6" width="12" height="12" rx="1" />
+                    </svg>
+                    <span>終了</span>
+                </button>
+            </div>
         </div>
 
         <!-- View: Mode Selection (Hidden) -->
-        <div id="view-modes" class="hidden space-y-6 animate-fade-in h-full flex flex-col justify-center py-4">
+        <div id="view-modes" class="animate-fade-in flex-1 flex flex-col justify-center py-2 overflow-y-auto">
 
             <div class="flex flex-col space-y-6">
                 <!-- Focus Section -->
-                <div class="space-y-3">
-                    <!-- Main Focus Button (Lighter & Higher) -->
-                    <!-- Focus Header (Non-clickable) -->
-                    <div class="flex items-center pl-2 pb-2">
-                        <div class="p-2 bg-indigo-100 text-indigo-500 rounded-full mr-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                <div class="space-y-2">
+                    <div class="flex items-center pl-2 pb-1">
+                        <div class="p-1.5 bg-indigo-100 text-indigo-500 rounded-full mr-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <circle cx="12" cy="12" r="3"></circle>
                             </svg>
                         </div>
-                        <span class="text-xl font-bold text-gray-700">集中</span>
+                        <span class="text-base font-bold text-gray-700">集中</span>
+                        <button onclick="alert('設定は準備中です')"
+                            class="ml-1 p-2 text-gray-400 hover:text-indigo-500 transition-colors flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
                     </div>
 
-                    <!-- Duration Presets (2x2 Grid) -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <button onclick="selectTime(10)"
-                            class="py-4 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all shadow-sm text-lg">
-                            10分
-                        </button>
-                        <button onclick="selectTime(25)"
-                            class="py-4 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all shadow-sm text-lg">
-                            25分
+                    <!-- Duration Presets (Grid) -->
+                    <div class="grid grid-cols-3 gap-2">
+                        <button onclick="selectTime(15)"
+                            class="py-3 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all shadow-sm text-sm">
+                            15分
                         </button>
                         <button onclick="selectTime(30)"
-                            class="py-4 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all shadow-sm text-lg">
+                            class="py-3 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all shadow-sm text-sm">
                             30分
                         </button>
                         <button onclick="selectTime(60)"
-                            class="py-4 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all shadow-sm text-lg">
+                            class="py-3 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:text-indigo-600 hover:border-indigo-200 hover:bg-indigo-50 transition-all shadow-sm text-sm">
                             60分
                         </button>
                     </div>
                 </div>
 
                 <!-- Break Section -->
-                <div class="space-y-4">
-                    <div class="flex items-center pl-2 pb-2">
-                        <div class="p-2 bg-teal-100 text-teal-500 rounded-full mr-3">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+                <div class="space-y-2">
+                    <div class="flex items-center pl-2 pb-1">
+                        <div class="p-1.5 bg-teal-100 text-teal-500 rounded-full mr-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round">
                                 <path d="M5 12h14"></path>
                                 <path d="m12 5 7 7-7 7"></path>
                             </svg>
                         </div>
-                        <span class="text-xl font-bold text-gray-700">休憩</span>
+                        <span class="text-base font-bold text-gray-700">休憩</span>
+                        <button onclick="alert('設定は準備中です')"
+                            class="ml-1 p-2 text-gray-400 hover:text-teal-500 transition-colors flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round">
+                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+                            </svg>
+                        </button>
                     </div>
 
-                    <div class="grid grid-cols-3 gap-3">
-                        <button onclick="selectTime(1, 'shortBreak')"
-                            class="py-4 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:text-teal-600 hover:border-teal-200 hover:bg-teal-50 transition-all shadow-sm text-lg">
-                            1分
-                        </button>
-                        <button onclick="selectTime(3, 'shortBreak')"
-                            class="py-4 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:text-teal-600 hover:border-teal-200 hover:bg-teal-50 transition-all shadow-sm text-lg">
-                            3分
-                        </button>
+                    <div class="grid grid-cols-3 gap-2">
                         <button onclick="selectTime(5, 'shortBreak')"
-                            class="py-4 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:text-teal-600 hover:border-teal-200 hover:bg-teal-50 transition-all shadow-sm text-lg">
+                            class="py-3 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:text-teal-600 hover:border-teal-200 hover:bg-teal-50 transition-all shadow-sm text-sm">
                             5分
+                        </button>
+                        <button onclick="selectTime(10, 'shortBreak')"
+                            class="py-3 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:text-teal-600 hover:border-teal-200 hover:bg-teal-50 transition-all shadow-sm text-sm">
+                            10分
+                        </button>
+                        <button onclick="selectTime(15, 'shortBreak')"
+                            class="py-3 bg-white border border-gray-200 rounded-xl text-gray-600 font-bold hover:text-teal-600 hover:border-teal-200 hover:bg-teal-50 transition-all shadow-sm text-sm">
+                            15分
                         </button>
                     </div>
                 </div>
@@ -199,7 +261,7 @@
 
         <!-- View: Settings (Hidden) -->
         <div id="view-settings" class="hidden space-y-6 animate-fade-in">
-            <h2 class="text-2xl font-bold text-gray-900 mb-6">設定</h2>
+            <h2 class="text-xl font-bold text-gray-900 mb-6">設定</h2>
 
             <!-- Notification Settings -->
             <div class="space-y-4">
@@ -253,9 +315,59 @@
                 </div>
             </div>
 
-            <div class="pt-8 text-center">
-                <button onclick="setView('timer')"
-                    class="text-sm text-gray-400 hover:text-gray-600 underline">タイマーに戻る</button>
+        </div>
+    </div>
+
+
+
+    <!-- Bottom Bar Navigation -->
+    <div class="w-full max-w-md px-6 pb-6 pt-2 bg-white/80 backdrop-blur-md md:rounded-b-2xl md:mb-4 safe-area-bottom">
+        <div class="flex items-center justify-around">
+            <!-- Mode (Timer) Trigger -->
+            <div onclick="handleClickTimer()"
+                class="flex flex-col items-center space-y-1 text-indigo-600 cursor-pointer hover:text-indigo-800 transition-colors group relative">
+                <div
+                    class="p-3 bg-white rounded-full shadow-sm border border-indigo-100 group-hover:scale-110 transition-transform ring-4 ring-indigo-50/50">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                </div>
+                <span class="text-[10px] font-bold tracking-wide text-gray-400 group-hover:text-indigo-600">タイマー</span>
+            </div>
+
+            <!-- Record (History) Trigger -->
+            <div onclick="alert('記録機能は準備中です')"
+                class="flex flex-col items-center space-y-1 text-gray-400 cursor-pointer hover:text-indigo-600 transition-colors group">
+                <div
+                    class="p-3 bg-white rounded-full shadow-sm border border-gray-100 group-hover:border-indigo-100 group-hover:scale-110 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10 9 9 9 8 9"></polyline>
+                    </svg>
+                </div>
+                <span class="text-[10px] font-bold tracking-wide text-gray-400 group-hover:text-indigo-600">記録</span>
+            </div>
+
+            <!-- Settings Trigger -->
+            <div onclick="setView('settings')"
+                class="flex flex-col items-center space-y-1 text-gray-400 cursor-pointer hover:text-indigo-600 transition-colors group">
+                <div
+                    class="p-3 bg-white rounded-full shadow-sm border border-gray-100 group-hover:border-indigo-100 group-hover:scale-110 transition-transform">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path
+                            d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
+                        </path>
+                    </svg>
+                </div>
+                <span class="text-[10px] font-bold tracking-wide text-gray-400 group-hover:text-indigo-600">設定</span>
             </div>
         </div>
     </div>
@@ -263,88 +375,69 @@
     <script>
         // --- State ---
         let timerInterval;
-        let timeLeft = 25 * 60;
+        let timeLeft = 0;
+        let originalTime = 0;
         let isRunning = false;
-        let currentMode = 'focus'; // focus, shortBreak, longBreak
+        let currentMode = 'none';
         const modes = {
-            focus: { time: 25 * 60, message: '集中する時間です' },
-            shortBreak: { time: 5 * 60, message: '少し休憩しましょう' },
-            longBreak: { time: 15 * 60, message: 'ゆっくり休憩しましょう' }
+            focus: { time: 25 * 60 },
+            shortBreak: { time: 5 * 60 },
+            longBreak: { time: 15 * 60 }
         };
 
-        // --- Audio with Tone.js ---
-        async function initAudio() {
-            await Tone.start();
+        // --- Helper: get DOM elements ---
+        function el(id) { return document.getElementById(id); }
+
+        // --- Button State Management ---
+        // state: 'idle' | 'running' | 'paused'
+        function setControlState(state) {
+            ['controls-idle', 'controls-running', 'controls-paused'].forEach(function (id) {
+                var d = el(id);
+                if (d) d.classList.add('hidden');
+            });
+            var target = el('controls-' + state);
+            if (target) target.classList.remove('hidden');
         }
 
-        function playSound(type) {
-            if (typeof Tone !== 'undefined') {
-                const synth = new Tone.PolySynth(Tone.Synth).toDestination();
-                const now = Tone.now();
-                try {
-                    if (type === 'start') {
-                        synth.triggerAttackRelease("C5", "8n", now);
-                    } else if (type === 'complete') {
-                        synth.triggerAttackRelease(["C5", "E5", "G5", "C6"], "8n", now);
-                    }
-                } catch (e) {
-                    console.log('Audio error', e);
-                }
-            }
-        }
-
-        // --- DOM Elements ---
-        const timerDisplay = document.getElementById('timer-display');
-        const timerStatus = document.getElementById('timer-status');
-        const btnToggle = document.getElementById('btn-toggle');
-        const btnStart = document.getElementById('btn-start');
-        const btnStop = document.getElementById('btn-stop');
-
-        // --- Timer Logic ---
+        // --- Timer Display ---
         function updateDisplay() {
-            const absTime = Math.abs(timeLeft);
-            const minutes = Math.floor(absTime / 60).toString().padStart(2, '0');
-            const seconds = (absTime % 60).toString().padStart(2, '0');
-            timerDisplay.textContent = `${minutes}:${seconds}`;
-            document.title = `${minutes}:${seconds} - Timer`;
-
-            // Overtime Visuals
+            var display = el('timer-display');
+            if (!display) return;
+            var absTime = Math.abs(timeLeft);
+            var mm = Math.floor(absTime / 60).toString().padStart(2, '0');
+            var ss = (absTime % 60).toString().padStart(2, '0');
+            display.textContent = mm + ':' + ss;
+            document.title = mm + ':' + ss + ' - Timer';
             if (timeLeft < 0) {
-                timerDisplay.classList.remove('text-gray-900', 'text-white');
-                timerDisplay.classList.add('text-red-500');
+                display.classList.remove('text-gray-900', 'text-white');
+                display.classList.add('text-red-500');
             } else {
-                // Restore default colors based on theme (simplification: remove specific red)
-                timerDisplay.classList.remove('text-red-500');
-                // Note: Theme implementation re-adds text-gray-900 or text-white, so removing red reveals base class usually.
-                // To be safe, we can check basic theme state or just add back base class if missing, 
-                // but simpler is to just toggle the 'overtime' class.
-                // Let's rely on changeTheme re-applying correct base colors if needed, but for now just remove red.
-                // We might need to ensure base color is present.
-                if (document.body.style.backgroundColor === 'rgb(15, 23, 42)') { // Dark mode check approx
-                    timerDisplay.classList.add('text-white');
-                } else {
-                    timerDisplay.classList.add('text-gray-900');
-                }
+                display.classList.remove('text-red-500');
+                display.classList.add('text-gray-900');
             }
         }
 
-        async function startTimer() {
-            if (isRunning) return;
+        // --- Timer Controls ---
+        function startTimer() {
+            if (isRunning || timeLeft <= 0) return;
             isRunning = true;
-
-            // Visual feedback
-            btnStart.classList.add('opacity-50', 'cursor-not-allowed');
-            btnStop.classList.remove('opacity-50', 'cursor-not-allowed');
-
-            await Tone.start();
-            // playSound('start'); // Sound removed
-
-            timerInterval = setInterval(() => {
+            setControlState('running');
+            timerInterval = setInterval(function () {
                 timeLeft--;
                 updateDisplay();
+                if (timeLeft === 0) playSound('complete');
+            }, 1000);
+            playSound('start');
+        }
 
-                // Optional: Play a sound exactly at 0 if desired, but user said "no sound".
-                // We just let it run.
+        function resumeTimer() {
+            if (isRunning) return;
+            isRunning = true;
+            setControlState('running');
+            timerInterval = setInterval(function () {
+                timeLeft--;
+                updateDisplay();
+                if (timeLeft === 0) playSound('complete');
             }, 1000);
         }
 
@@ -352,272 +445,116 @@
             if (!isRunning) return;
             clearInterval(timerInterval);
             isRunning = false;
-            btnStart.classList.remove('opacity-50', 'cursor-not-allowed');
-            btnStop.classList.add('opacity-50', 'cursor-not-allowed');
-
-            // If timer reached overtime (completed goal), save session on stop
-            if (timeLeft <= 0) {
-                saveSession(originalTime);
-                // We don't auto-reset. User sees the final overtime.
-                // Session is saved.
-            }
+            setControlState('paused');
         }
 
-        function resetTimer() {
+        function stopTimer() {
             clearInterval(timerInterval);
             isRunning = false;
-            timeLeft = modes[currentMode].time; // Actually we use logic from selectTime usually, but default fallbacks:
-            // Since we set timeLeft directly in selectTime, we might need to store 'originalDuration' instead of relying on modes default for custom times.
-            // But wait, resetTimer above uses `modes[currentMode].time` or `originalTime`.
-            // Let's fix resetTimer to use `originalTime` which we update in selectTime.
-            timeLeft = originalTime;
-
-            updateDisplay();
-
-            // Reset styles
-            timerDisplay.classList.remove('text-red-500');
-            if (document.body.style.backgroundColor === 'rgb(15, 23, 42)') {
-                timerDisplay.classList.add('text-white');
-            } else {
-                timerDisplay.classList.add('text-gray-900');
+            // 集中モードで少しでも経過していたら記録
+            if (currentMode === 'focus' && originalTime - timeLeft > 60) {
+                saveSession(originalTime - timeLeft);
             }
-
-            btnStart.classList.remove('opacity-50', 'cursor-not-allowed');
-            btnStop.classList.remove('opacity-50', 'cursor-not-allowed');
-        }
-
-        function setMode(mode) {
-            pauseTimer();
-            currentMode = mode;
-            timeLeft = modes[mode].time;
-            originalTime = timeLeft; // Update originalTime when mode changes
+            // タイマーをリセット
+            timeLeft = originalTime;
             updateDisplay();
-            btnStart.classList.remove('opacity-50', 'cursor-not-allowed');
-            btnStop.classList.remove('opacity-50', 'cursor-not-allowed');
+            var display = el('timer-display');
+            if (display) {
+                display.classList.remove('text-red-500');
+                display.classList.add('text-gray-900');
+            }
+            setControlState('idle');
         }
 
-        // --- Stats & Chart.js ---
+        // --- Session Stats ---
         function saveSession(seconds) {
             const today = new Date().toDateString();
             let stats = JSON.parse(localStorage.getItem('timerStats')) || {};
-
-            if (!stats[today]) {
-                stats[today] = { count: 0, minutes: 0 };
-            }
-
+            if (!stats[today]) stats[today] = { count: 0, minutes: 0 };
             stats[today].count += 1;
             stats[today].minutes += Math.floor(seconds / 60);
-
             localStorage.setItem('timerStats', JSON.stringify(stats));
+        }
+
+        // --- View Navigation ---
+        function setView(view) {
+            ['view-timer', 'view-settings', 'view-modes'].forEach(id => {
+                const v = el(id);
+                if (v) v.classList.add('hidden');
+            });
+            const target = el('view-' + view);
+            if (target) target.classList.remove('hidden');
+        }
+
+        function handleClickTimer() { setView('modes'); }
+
+        // --- Select Time (called by buttons) ---
+        function selectTime(minutes, mode) {
+            mode = mode || 'focus';
+            // 実行中なら停止
+            clearInterval(timerInterval);
+            isRunning = false;
+
+            currentMode = mode;
+            timeLeft = minutes * 60;
+            originalTime = timeLeft;
+
+            var modeLabel = el('timer-label-mode');
+            var durationLabel = el('timer-label-duration');
+            if (modeLabel) modeLabel.textContent = mode === 'shortBreak' ? '休憩' : '集中';
+            if (durationLabel) durationLabel.textContent = minutes + '分';
+
+            updateDisplay();
+            setControlState('idle');
+            setView('timer');
+        }
+
+        // --- Settings ---
+        let notificationsEnabled = false;
+        function toggleNotification() {
+            notificationsEnabled = !notificationsEnabled;
+            const toggleBg = el('notification-toggle');
+            const toggleDot = toggleBg ? toggleBg.querySelector('div') : null;
+            if (notificationsEnabled) {
+                if (toggleBg) toggleBg.classList.replace('bg-gray-200', 'bg-indigo-500');
+                if (toggleDot) toggleDot.classList.add('translate-x-6');
+                if ('Notification' in window) Notification.requestPermission();
+            } else {
+                if (toggleBg) toggleBg.classList.replace('bg-indigo-500', 'bg-gray-200');
+                if (toggleDot) toggleDot.classList.remove('translate-x-6');
+            }
+        }
+
+        function changeTheme(theme) {
+            const mainCard = el('main-card');
+            const display = el('timer-display');
+            const status = el('timer-status');
+            document.body.className = 'flex flex-col items-center bg-gray-50 h-[100dvh] w-full overflow-hidden p-0 md:p-4 transition-colors duration-500';
+            if (theme === 'dark') {
+                document.body.style.backgroundColor = '#0f172a';
+                if (mainCard) mainCard.className = 'w-full flex-1 md:h-auto md:max-w-md bg-slate-900 border border-slate-800 p-4 md:p-8 md:rounded-2xl shadow-xl flex flex-col transition-colors duration-500 overflow-hidden relative';
+                if (display) display.className = 'timer-digits font-mono text-7xl md:text-8xl font-bold text-white tracking-tight';
+            } else {
+                document.body.style.backgroundColor = '#f9fafb';
+                if (mainCard) mainCard.className = 'w-full flex-1 md:h-auto md:max-w-md bg-white border border-gray-100 p-4 md:p-8 md:rounded-2xl shadow-xl flex flex-col transition-colors duration-500 overflow-hidden relative';
+                if (display) display.className = 'timer-digits font-mono text-7xl md:text-8xl font-bold text-gray-900 tracking-tight';
+            }
+            if (status) {
+                if (theme === 'pink') status.className = 'mt-2 text-pink-500 font-medium';
+                else if (theme === 'teal') status.className = 'mt-2 text-teal-500 font-medium';
+                else status.className = 'mt-2 text-indigo-500 font-medium';
+            }
         }
 
         // --- Service Worker ---
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
+            window.addEventListener('load', function () {
                 navigator.serviceWorker.register('./sw.js');
             });
         }
 
         // --- Init ---
-        // updateDisplay(); // Don't show default time on load
-        setView('modes'); // Start on mode selection screen by default
-
-    </script>
-
-    <!-- Bottom Left Timer Menu: Removed (Replaced by View) -->
-
-
-    <!-- Trigger Icons Container -->
-    <div
-        class="flex items-center space-x-8 bg-white/80 backdrop-blur-sm p-4 rounded-full shadow-sm border border-gray-100/50">
-        <!-- Mode (Timer) Trigger -->
-        <div onclick="handleClickTimer()"
-            class="flex flex-col items-center space-y-2 text-indigo-600 cursor-pointer hover:text-indigo-800 transition-colors group relative w-16">
-            <div
-                class="p-4 bg-white rounded-full shadow-md border border-indigo-100 group-hover:scale-110 transition-transform ring-4 ring-indigo-50/50">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                </svg>
-            </div>
-            <span class="text-xs font-bold tracking-wide text-gray-500 group-hover:text-indigo-600">タイマー</span>
-        </div>
-
-        <!-- Record (History) Trigger (Non-functional placeholder for now) -->
-        <div onclick="alert('記録機能は準備中です')"
-            class="flex flex-col items-center space-y-2 text-gray-400 cursor-pointer hover:text-indigo-600 transition-colors group w-16">
-            <div
-                class="p-4 bg-white rounded-full shadow-md border border-gray-100 group-hover:border-indigo-100 group-hover:scale-110 transition-transform">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                    <polyline points="14 2 14 8 20 8"></polyline>
-                    <line x1="16" y1="13" x2="8" y2="13"></line>
-                    <line x1="16" y1="17" x2="8" y2="17"></line>
-                    <polyline points="10 9 9 9 8 9"></polyline>
-                </svg>
-            </div>
-            <span class="text-xs font-bold tracking-wide text-gray-500 group-hover:text-indigo-600">記録</span>
-        </div>
-
-        <!-- Settings Trigger -->
-        <div onclick="setView('settings')"
-            class="flex flex-col items-center space-y-2 text-gray-400 cursor-pointer hover:text-indigo-600 transition-colors group w-16">
-            <div
-                class="p-4 bg-white rounded-full shadow-md border border-gray-100 group-hover:border-indigo-100 group-hover:scale-110 transition-transform">
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
-                    stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3"></circle>
-                    <path
-                        d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z">
-                    </path>
-                </svg>
-            </div>
-            <span class="text-xs font-bold tracking-wide text-gray-500 group-hover:text-indigo-600">設定</span>
-        </div>
-    </div>
-    </div>
-
-    <script>
-        // --- View Navigation ---
-        let currentView = 'timer';
-
-        function setView(view) {
-            currentView = view;
-            const timerView = document.getElementById('view-timer');
-            const settingsView = document.getElementById('view-settings');
-            const modesView = document.getElementById('view-modes');
-
-            // Hide all
-            timerView.classList.add('hidden');
-            settingsView.classList.add('hidden');
-            modesView.classList.add('hidden');
-
-            if (view === 'timer') {
-                timerView.classList.remove('hidden');
-            } else if (view === 'settings') {
-                settingsView.classList.remove('hidden');
-            } else if (view === 'modes') {
-                modesView.classList.remove('hidden');
-            }
-        }
-
-        function handleClickTimer() {
-            // Updated: Always go to Timer View, do NOT toggle modes
-            setView('view-modes'); // Previously 'view-modes' was hidden, but user requested layout changes implies this IS the main view or at least accessible.
-            // Wait, User said "タイマーのぼたんをおしたらモードが変わるのはやめて" -> "Stop changing modes when pressing the timer button".
-            // "２５分のタイマーが表示されないようにしてください" -> "Don't display the 25 min timer".
-            // "押してもモードが変更されないようにしてください" -> "Don't change mode when pressed".
-
-            // Interpretation: The Timer Icon at the bottom left should probably just GO to the main screen, but NOT toggle between 'Timer View' and 'Selection View' automatically like a toggle switch.
-            // OR: It should just do nothing if already there?
-            // "Don't show the 25 min timer" -> Default state should be 00:00 or empty.
-
-            // Let's set it to go to 'view-modes' (the selection screen) because that's where the user picks 10/30/60.
-            // The "Timer View" with 00:00 is useless unless a time is picked.
-            // So the 'Home' screen is effectively 'view-modes'.
-
-            setView('modes');
-        }
-
-        function selectMode(mode) {
-            setMode(mode);
-            setView('timer');
-        }
-
-        function selectTime(minutes, mode = 'focus') {
-            currentMode = mode;
-            timeLeft = minutes * 60;
-            originalTime = timeLeft;
-            updateDisplay();
-
-            // Set styling based on mode (Optional: update theme color?)
-            if (mode === 'shortBreak') {
-                // Could call changeTheme to teal if desired, but user didn't explicitly ask to switch themes automatically
-                changeTheme('teal');
-            } else {
-                changeTheme('indigo');
-            }
-
-            // Allow controls
-            const btnStart = document.getElementById('btn-start');
-            const btnStop = document.getElementById('btn-stop');
-            btnStart.classList.remove('opacity-50', 'cursor-not-allowed');
-            btnStop.classList.remove('opacity-50', 'cursor-not-allowed');
-
-            setView('timer');
-        }
-
-        /* toggleTimerMenu removed */
-
-        // --- Settings Logic ---
-        let notificationsEnabled = false;
-        function toggleNotification() {
-            notificationsEnabled = !notificationsEnabled;
-            // Visual Toggle
-            const toggleBg = document.getElementById('notification-toggle');
-            const toggleDot = toggleBg.querySelector('div');
-
-            if (notificationsEnabled) {
-                toggleBg.classList.replace('bg-gray-200', 'bg-indigo-500');
-                toggleDot.classList.add('translate-x-6'); // Adjusted for larger toggle
-                if ("Notification" in window) Notification.requestPermission();
-            } else {
-                toggleBg.classList.replace('bg-indigo-500', 'bg-gray-200');
-                toggleDot.classList.remove('translate-x-6');
-            }
-        }
-
-        function changeTheme(theme) {
-            const mainCard = document.getElementById('main-card');
-            const timerDisplay = document.getElementById('timer-display');
-            const timerStatus = document.getElementById('timer-status');
-            const btnToggle = document.getElementById('btn-toggle');
-
-            // Reset base styles
-            document.body.className = "flex flex-col items-center justify-center min-h-screen p-4 transition-colors duration-500";
-
-            if (theme === 'dark') {
-                document.body.style.backgroundColor = '#0f172a';
-                mainCard.className = "w-full max-w-md bg-slate-900 border border-slate-800 p-8 rounded-2xl shadow-xl min-h-[500px] transition-colors duration-500";
-
-                // Text colors
-                document.querySelector('#view-timer h1').className = "text-2xl font-bold text-white";
-                document.querySelector('#view-timer p.text-sm').className = "text-slate-400 text-sm";
-                document.querySelector('#view-settings h2').className = "text-2xl font-bold text-white mb-6"; // Settings H2
-                document.querySelector('#view-settings h3').className = "text-sm font-semibold text-slate-400 uppercase tracking-wider"; // Settings H3
-                document.querySelector('#view-settings .font-bold').className = "font-bold text-white"; // Notification text
-                document.querySelector('#view-settings .underline').className = "text-sm text-slate-400 hover:text-slate-200 underline"; // Back to timer link
-
-                timerDisplay.className = "timer-digits font-mono text-7xl font-bold text-white tracking-tight";
-            } else {
-                document.body.style.backgroundColor = '#f9fafb';
-                mainCard.className = "w-full max-w-md bg-white border border-gray-100 p-8 rounded-2xl shadow-xl min-h-[500px] transition-colors duration-500";
-
-                document.querySelector('#view-timer h1').className = "text-2xl font-bold text-gray-900";
-                document.querySelector('#view-timer p.text-sm').className = "text-gray-500 text-sm";
-                document.querySelector('#view-settings h2').className = "text-2xl font-bold text-gray-900 mb-6";
-                document.querySelector('#view-settings h3').className = "text-sm font-semibold text-gray-400 uppercase tracking-wider";
-                document.querySelector('#view-settings .font-bold').className = "font-bold text-gray-700";
-                document.querySelector('#view-settings .underline').className = "text-sm text-gray-400 hover:text-gray-600 underline";
-
-                timerDisplay.className = "timer-digits font-mono text-7xl font-bold text-gray-900 tracking-tight";
-            }
-
-            // Accent Colors
-            if (theme === 'pink') {
-                timerStatus.className = "mt-2 text-pink-500 font-medium";
-                btnToggle.className = "btn-hover p-6 rounded-full bg-pink-500 text-white shadow-lg shadow-pink-500/20";
-            } else if (theme === 'teal') {
-                timerStatus.className = "mt-2 text-teal-500 font-medium";
-                btnToggle.className = "btn-hover p-6 rounded-full bg-teal-500 text-white shadow-lg shadow-teal-500/20";
-            } else {
-                // Indigo (Default/Dark)
-                timerStatus.className = "mt-2 text-indigo-500 font-medium";
-                btnToggle.className = "btn-hover p-6 rounded-full bg-indigo-600 text-white shadow-lg shadow-indigo-600/20";
-            }
-        }
+        setView('modes');
     </script>
 </body>
 
